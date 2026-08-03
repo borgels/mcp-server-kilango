@@ -1,0 +1,59 @@
+import { z } from 'zod/v4';
+import { contractIndex, runTool, WRITE, type RegisterFn } from './shared.js';
+import { resolveOperation } from '../kilango/openapi.js';
+import { assertWritesEnabled } from '../kilango/policy.js';
+
+const queryValue = z.union([z.string(), z.number(), z.boolean(), z.null()]);
+
+export const registerOperationTools: RegisterFn = (server, ctx) => {
+  server.registerTool(
+    'kilango_call_operation',
+    {
+      title: 'Call Kilango Operation',
+      description:
+        'Escape hatch: call any operator API operation by its operationId (discover ids with kilango_search_operations / kilango_describe_operation). Provide path params, query, and body separately. If-Match operations fetch and send the current ETag automatically. Mutating calls are gated by KILANGO_ENABLE_WRITES and by the API key\'s own scopes.',
+      inputSchema: {
+        operationId: z.string().trim().min(1),
+        path: z.record(z.string(), z.union([z.string(), z.number()])).optional().describe('Path parameters, e.g. { portalRef: "acme" }.'),
+        query: z.record(z.string(), queryValue).optional(),
+        body: z.unknown().optional(),
+        dryRun: z.boolean().default(false),
+        idempotencyKey: z.string().trim().min(8).optional(),
+      },
+      annotations: WRITE,
+    },
+    async input =>
+      runTool(ctx, { tool: 'kilango_call_operation', operationId: input.operationId }, async () => {
+        const index = await contractIndex(ctx);
+        const resolved = resolveOperation(index, input.operationId, {
+          path: input.path,
+          query: input.query,
+          body: input.body,
+        });
+
+        if (resolved.isWrite) {
+          assertWritesEnabled(input.operationId);
+        }
+
+        if (resolved.requiresIfMatch) {
+          const res = await ctx.client.writeWithIfMatch(resolved.method, resolved.path, {
+            body: resolved.body,
+            query: resolved.query,
+            etagFromPath: resolved.path,
+            idempotencyKey: input.idempotencyKey,
+            dryRun: input.dryRun,
+          });
+          return res.data;
+        }
+
+        const res = await ctx.client.request(resolved.path, {
+          method: resolved.method,
+          body: resolved.body,
+          query: resolved.query,
+          idempotencyKey: input.idempotencyKey,
+          dryRun: input.dryRun,
+        });
+        return res.data;
+      }),
+  );
+};

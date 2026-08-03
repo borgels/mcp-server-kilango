@@ -1,0 +1,35 @@
+# Paste these services into ~/mcp/docker-compose.yml on borgels-1 (they reuse the shared
+# &mcp-service anchor). One instance per company that has a Kilango workspace. Loopback
+# ports 8093/8094/8095 are free (8091 = withings, 8092 = garmin). The published loopback
+# port lets host-Caddy reach /kilango/connect-app + /healthz directly, bypassing the
+# gateway Entra auth; /mcp still goes through the gateway.
+
+  mcp-kilango-bos:
+    <<: *mcp-service
+    image: ghcr.io/borgels/mcp-server-kilango:latest
+    container_name: mcp-kilango-bos
+    env_file: [env/internal.env, env/kilango-bos.env]
+    ports:
+      - "127.0.0.1:8093:3000"
+    volumes:
+      - ./audit/kilango-bos:/data
+
+  mcp-kilango-spz:
+    <<: *mcp-service
+    image: ghcr.io/borgels/mcp-server-kilango:latest
+    container_name: mcp-kilango-spz
+    env_file: [env/internal.env, env/kilango-spz.env]
+    ports:
+      - "127.0.0.1:8094:3000"
+    volumes:
+      - ./audit/kilango-spz:/data
+
+  mcp-kilango-one:
+    <<: *mcp-service
+    image: ghcr.io/borgels/mcp-server-kilango:latest
+    container_name: mcp-kilango-one
+    env_file: [env/internal.env, env/kilango-one.env]
+    ports:
+      - "127.0.0.1:8095:3000"
+    volumes:
+      - ./audit/kilango-one:/data

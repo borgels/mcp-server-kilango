@@ -1,0 +1,65 @@
+{
+  "name": "mcp-server-kilango",
+  "version": "0.1.0",
+  "description": "Operator MCP server for Kilango — build and manage portals, pages, widgets, and app connections in a Kilango workspace.",
+  "type": "module",
+  "main": "./dist/stdio.js",
+  "exports": {
+    ".": "./dist/stdio.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    ".env.example"
+  ],
+  "bin": {
+    "mcp-server-kilango": "./dist/stdio.js"
+  },
+  "scripts": {
+    "build": "tsup src/transports/stdio.ts src/transports/http.ts --format esm --dts --clean --sourcemap",
+    "dev": "tsx src/transports/stdio.ts",
+    "dev:http": "tsx src/transports/http.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "prepare": "npm run build",
+    "prepack": "npm run typecheck && npm test && npm run build",
+    "smoke:live": "tsx test/live-smoke.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/borgels/mcp-server-kilango.git"
+  },
+  "keywords": [
+    "mcp",
+    "kilango",
+    "portal",
+    "operator"
+  ],
+  "author": "",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "bugs": {
+    "url": "https://github.com/borgels/mcp-server-kilango/issues"
+  },
+  "homepage": "https://github.com/borgels/mcp-server-kilango#readme",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^4.4.3"
+  },
+  "overrides": {
+    "ip-address": ">=10.1.1",
+    "hono": ">=4.12.16",
+    "fast-uri": ">=3.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.7.0",
+    "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.6"
+  }
+}

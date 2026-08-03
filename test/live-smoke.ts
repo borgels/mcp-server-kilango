@@ -112,7 +112,7 @@ async function main(): Promise<void> {
   const slug = `mcp-smoke-${workspace.requestId ?? 'x'}`.slice(0, 40);
   const portal = await client.request<{ id: string; slug?: string }>('/portals', {
     method: 'POST',
-    body: { brandId, name: 'MCP Smoke Portal', kind: 'client', slug, seedHomePage: true },
+    body: { brandId, name: 'MCP Smoke Portal', kind: 'CLIENT', slug, seedHomePage: true },
   });
   const portalRef = (portal.data as { slug?: string; id: string }).slug ?? (portal.data as { id: string }).id;
   console.log('Created portal:', portalRef);

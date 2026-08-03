@@ -11,7 +11,9 @@ export interface ConnectionField {
 }
 
 export interface CatalogApp {
-  appKey: string;
+  /** The app identifier. Kilango's catalog names this field `key`; `appKey` is accepted too. */
+  key?: string;
+  appKey?: string;
   name?: string;
   kind?: string;
   appClass?: string;
@@ -78,9 +80,9 @@ export async function checkConnectionHealth(client: KilangoClient, provider: str
 // --- Orchestration ---
 
 function providerOf(app: CatalogApp): string {
-  // The manifest's connection provider; falls back to the appKey. Verify against a real
-  // get_catalog_app response during the e2e smoke test (see plan gap #4).
-  return app.provider ?? app.appKey;
+  // The manifest's connection provider (confirmed present on every integration app);
+  // falls back to the app key.
+  return app.provider ?? app.key ?? app.appKey ?? '';
 }
 
 function authModeOf(app: CatalogApp): string {

@@ -1,0 +1,24 @@
+{
+  "_comment": "Merge these entries into ~/mcp/hosts.json. Fill the real tenant GUIDs (borgels = <tenant GUID>; spitze + one from the platform notes) and the objectId of each SG-<group><company> group after creating + app-assigning it in the matching Entra tenant. Only add a host once its Kilango workspace and shared API key exist.",
+  "kilango.bos.mcp.example.com": {
+    "tenant": "<tenant GUID>",
+    "upstream": "http://mcp-kilango-bos:3000/mcp",
+    "groupId": "<SG-<group> objectId>",
+    "system": "kilango",
+    "company": "bos"
+  },
+  "kilango.spz.mcp.example.com": {
+    "tenant": "<spitze tenant GUID>",
+    "upstream": "http://mcp-kilango-spz:3000/mcp",
+    "groupId": "<SG-<group> objectId>",
+    "system": "kilango",
+    "company": "spz"
+  },
+  "kilango.one.mcp.example.com": {
+    "tenant": "<one tenant GUID>",
+    "upstream": "http://mcp-kilango-one:3000/mcp",
+    "groupId": "<SG-<group> objectId>",
+    "system": "kilango",
+    "company": "one"
+  }
+}

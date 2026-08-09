@@ -7,13 +7,36 @@ const SECRET_PATTERNS = [
   /("?(?:secret|apiKey|api_key|accessToken|access_token|refreshToken|refresh_token|password|token|clientSecret|client_secret)"?\s*[:=]\s*)("?)[^"',\s}]+\2/gi,
 ];
 
+/**
+ * `remediation` is Kilango's best affordance: the exact call that fixes the
+ * error. It arrives STRUCTURED as `{ method, path }` (packages/control's
+ * `Remediation` type), not as a string — this server assumed a string, ran it
+ * through `redactSecrets`, and died with "current.replace is not a function".
+ * The real error was replaced by a meaningless one, so the field that exists to
+ * tell an agent what to do next was the field that hid what went wrong.
+ */
+export type KilangoRemediation = string | { method?: unknown; path?: unknown };
+
 export interface KilangoErrorEnvelope {
   error?: string;
   message?: string;
   details?: unknown;
-  remediation?: string;
+  remediation?: KilangoRemediation;
   requestId?: string;
   [key: string]: unknown;
+}
+
+/** "POST /accesses/{id}/resend-invite" from either shape; undefined when there is nothing to say. */
+export function formatRemediation(value: unknown): string | undefined {
+  if (typeof value === 'string') {
+    return value.trim() || undefined;
+  }
+  if (typeof value !== 'object' || value === null) {
+    return undefined;
+  }
+  const { method, path } = value as { method?: unknown; path?: unknown };
+  const parts = [method, path].filter((p): p is string => typeof p === 'string' && p.trim() !== '');
+  return parts.length ? parts.join(' ') : undefined;
 }
 
 /**
@@ -70,16 +93,17 @@ export function fromErrorEnvelope(
   context: { method: string; path: string },
 ): KilangoApiError {
   const envelope = isErrorEnvelope(body) ? body : undefined;
-  const code = envelope?.error ?? `http_${status}`;
+  const code = typeof envelope?.error === 'string' ? envelope.error : `http_${status}`;
   const message =
-    envelope?.message ??
+    (typeof envelope?.message === 'string' ? envelope.message : undefined) ??
     (typeof body === 'string' && body ? body : `Kilango API request failed with HTTP ${status}`);
   return new KilangoApiError({
     status,
     code,
     message,
-    remediation: envelope?.remediation,
-    requestId: envelope?.requestId,
+    // Structured { method, path } becomes "POST /path"; a plain string passes through.
+    remediation: formatRemediation(envelope?.remediation),
+    requestId: typeof envelope?.requestId === 'string' ? envelope.requestId : undefined,
     details: envelope?.details,
     method: context.method,
     path: context.path,
@@ -96,7 +120,14 @@ export function formatUnknownError(error: unknown): string {
   return redactSecrets(String(error));
 }
 
-export function redactSecrets(value: string): string {
+/**
+ * Takes `unknown`, not `string`, on purpose. This runs inside error handling,
+ * where the input is by definition whatever went wrong — and a throw HERE
+ * replaces the real error with a confusing one about redaction. Coercing is
+ * strictly better than crashing on the path whose job is to explain a crash.
+ */
+export function redactSecrets(value: unknown): string {
+  const text = typeof value === 'string' ? value : safeStringify(value);
   return SECRET_PATTERNS.reduce((current, pattern) => {
     pattern.lastIndex = 0;
     return current.replace(pattern, (match, ...groups) => {
@@ -113,7 +144,27 @@ export function redactSecrets(value: string): string {
       }
       return '[REDACTED]';
     });
-  }, value);
+  }, text);
+}
+
+/** JSON when it works, String() when it does not (cycles, BigInt, throwing toJSON). */
+function safeStringify(value: unknown): string {
+  if (value === null || value === undefined) {
+    return '';
+  }
+  try {
+    const json = JSON.stringify(value);
+    if (typeof json === 'string') {
+      return json;
+    }
+  } catch {
+    // fall through
+  }
+  try {
+    return String(value);
+  } catch {
+    return '[unprintable]';
+  }
 }
 
 function isErrorEnvelope(value: unknown): value is KilangoErrorEnvelope {

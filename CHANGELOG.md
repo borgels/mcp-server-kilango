@@ -13,6 +13,14 @@
   portal's activated apps on every save, so it cannot fail. The app-owned form
   (`appKey` + `widgetKey`) still works. Several widgets can be placed in one
   call via `widgets`.
+- **Fix: a structured `remediation` crashed the whole error path.** Kilango
+  sends `remediation` as `{ method, path }` — the exact call that fixes the
+  error — but this server typed it as a string and ran it through
+  `redactSecrets`, which threw `current.replace is not a function`. Every such
+  error was replaced by that meaningless message, so the field whose job is to
+  say what to do next was the one hiding what went wrong. `redactSecrets` now
+  takes `unknown` and coerces (throwing inside error handling is never right),
+  and the remediation is rendered as `"POST /accesses/{id}/resend-invite"`.
 - **Fix: `kilango_call_operation` could not send a body.** The `body` parameter
   was `z.unknown()`, which compiles to an empty JSON Schema, so clients sent it
   as a string and Kilango rejected it with `expected object, received string` —

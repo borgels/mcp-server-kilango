@@ -16,6 +16,66 @@ export interface Position {
   after?: string;
 }
 
+/**
+ * One entry in the `place_widgets` body. Either the TYPED form
+ * (`widgetType`, optionally pinned with `supplierAppKey`) or the app-owned form
+ * (`appKey` + `widgetKey`) — never both, never neither.
+ */
+export interface PlaceWidgetEntry {
+  widgetType?: string | undefined;
+  supplierAppKey?: string | undefined;
+  appKey?: string | undefined;
+  widgetKey?: string | undefined;
+  position?: Position | undefined;
+  config?: Record<string, unknown> | undefined;
+  visibility?: Record<string, unknown> | undefined;
+}
+
+export function assertPlaceForm(entry: PlaceWidgetEntry): void {
+  const typed = entry.widgetType !== undefined;
+  const owned = entry.appKey !== undefined || entry.widgetKey !== undefined;
+  if (typed && owned) {
+    throw new Error(
+      "Give either widgetType (Kilango's own concept) or appKey+widgetKey (an app's own widget), not both. To pin a supplier for a widgetType use supplierAppKey.",
+    );
+  }
+  if (!typed && !owned) {
+    throw new Error('Each widget needs either widgetType, or appKey + widgetKey.');
+  }
+  if (owned && (entry.appKey === undefined || entry.widgetKey === undefined)) {
+    throw new Error("An app's own widget needs BOTH appKey and widgetKey.");
+  }
+}
+
+/**
+ * The `widgets` list, or the single-widget shorthand promoted into a one-item
+ * list. The route always takes a LIST, even for one widget.
+ */
+export function collectPlaceWidgets(input: PlaceWidgetEntry & { widgets?: PlaceWidgetEntry[] | undefined }): PlaceWidgetEntry[] {
+  const shorthandUsed =
+    input.widgetType !== undefined || input.appKey !== undefined || input.widgetKey !== undefined;
+  if (input.widgets?.length) {
+    if (shorthandUsed) {
+      throw new Error('Use either the widgets list or the single-widget fields, not both.');
+    }
+    for (const entry of input.widgets) {
+      assertPlaceForm(entry);
+    }
+    return input.widgets;
+  }
+  const single: PlaceWidgetEntry = {
+    ...(input.widgetType !== undefined ? { widgetType: input.widgetType } : {}),
+    ...(input.supplierAppKey !== undefined ? { supplierAppKey: input.supplierAppKey } : {}),
+    ...(input.appKey !== undefined ? { appKey: input.appKey } : {}),
+    ...(input.widgetKey !== undefined ? { widgetKey: input.widgetKey } : {}),
+    ...(input.position !== undefined ? { position: input.position } : {}),
+    ...(input.config !== undefined ? { config: input.config } : {}),
+    ...(input.visibility !== undefined ? { visibility: input.visibility } : {}),
+  };
+  assertPlaceForm(single);
+  return [single];
+}
+
 export function countPositionHints(position: Position | undefined): number {
   if (!position) {
     return 0;

@@ -5,6 +5,7 @@ import {
   assertCompletePermutation,
   assertSinglePosition,
   blockIdsOf,
+  collectPlaceWidgets,
   computeReorder,
   summarizeRendering,
   type Position,
@@ -25,6 +26,24 @@ const positionSchema = z
     after: z.string().optional(),
   })
   .optional();
+
+/**
+ * One entry in the `widgets` list. Deliberately NOT a discriminated union: the
+ * route accepts either the typed form or the app-owned form, and a union here
+ * would make the JSON Schema harder for a model to fill than the error is to
+ * read. `assertPlaceForm` enforces the either/or with a message that names the
+ * missing field.
+ */
+const placeWidgetEntrySchema = z.object({
+  widgetType: z.string().trim().min(1).optional(),
+  supplierAppKey: z.string().trim().min(1).optional(),
+  appKey: z.string().trim().min(1).optional(),
+  widgetKey: z.string().trim().min(1).optional(),
+  position: positionSchema,
+  config: z.record(z.string(), z.unknown()).optional(),
+  visibility: z.record(z.string(), z.unknown()).optional(),
+});
+
 
 export const registerPageTools: RegisterFn = (server, ctx) => {
   server.registerTool(
@@ -246,16 +265,22 @@ export const registerPageTools: RegisterFn = (server, ctx) => {
   server.registerTool(
     'kilango_place_widget',
     {
-      title: 'Place App Widget',
+      title: 'Place Widgets',
       description:
-        'Place an app widget on a page. The app must be installed AND activated in the portal first (otherwise the app_not_activated_in_portal error names the fixing call). Visual position follows the widget\'s renderRole tier — read the returned rendering note; index 0 is not necessarily top of page.',
+        'Place one or more widgets on a page. Each entry is ONE of two forms. (1) { widgetType, supplierAppKey? } places Kilango\'s own product concept (invoices, contracts, equipment, ...) and is the PRIMARY way to build a page: the supplier is derived from the portal\'s activated apps on every save, so it never fails — with no activated supplier the widget is placed unbound and renders as an honest empty state hidden from end users, binding by itself once a supplier app is activated. supplierAppKey pins one supplier when several are activated. (2) { appKey, widgetKey } places an app\'s OWN widget; the app must be installed AND activated in the portal (otherwise app_not_activated_in_portal names the fixing call). Pass `widgets` to place several in one turn; the single-widget fields are a shorthand for one. Visual position follows each widget\'s renderRole tier — read the returned rendering note; index 0 is not necessarily top of page.',
       inputSchema: {
         portalRef: z.string().trim().min(1),
         pageRef: z.string().trim().min(1),
-        appKey: z.string().trim().min(1),
-        widgetKey: z.string().trim().min(1),
+        widgets: z.array(placeWidgetEntrySchema).min(1).max(20).optional()
+          .describe('Several widgets in one call. Omit to use the single-widget shorthand fields.'),
+        // Shorthand for placing exactly one widget.
+        widgetType: z.string().trim().min(1).optional(),
+        supplierAppKey: z.string().trim().min(1).optional(),
+        appKey: z.string().trim().min(1).optional(),
+        widgetKey: z.string().trim().min(1).optional(),
         position: positionSchema,
         config: z.record(z.string(), z.unknown()).optional(),
+        visibility: z.record(z.string(), z.unknown()).optional(),
         dryRun: z.boolean().default(false),
       },
       annotations: WRITE,
@@ -263,16 +288,17 @@ export const registerPageTools: RegisterFn = (server, ctx) => {
     async input =>
       runTool(ctx, { tool: 'kilango_place_widget', operationId: 'place_widgets', method: 'POST', path: '/portals/{portalRef}/pages/{pageRef}/widgets' }, async () => {
         assertWritesEnabled('place_widgets');
-        assertSinglePosition(input.position as Position | undefined);
+        const widgets = collectPlaceWidgets(input);
+        for (const w of widgets) {
+          assertSinglePosition(w.position as Position | undefined);
+        }
+        // The route takes { widgets: [...] } — a LIST, even for one. Sending the
+        // bare single-widget object (which this tool did until 0.1.1) fails the
+        // body schema with "expected array, received undefined" on /widgets.
         const res = await ctx.client.request(`${pageBase(input.portalRef, input.pageRef)}/widgets`, {
           method: 'POST',
           dryRun: input.dryRun,
-          body: {
-            appKey: input.appKey,
-            widgetKey: input.widgetKey,
-            ...(input.config ? { config: input.config } : {}),
-            ...(input.position ? { position: input.position } : {}),
-          },
+          body: { widgets },
         });
         const note = summarizeRendering(res.data);
         return note ? { result: res.data, note } : res.data;

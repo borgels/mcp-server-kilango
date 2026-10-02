@@ -31,7 +31,7 @@ describe('StateStore', () => {
 
   it('binds no secrets — only app/provider/fields', () => {
     const store = new StateStore();
-    const token = store.create({ ...payload, user: 'abo@borgels.com' }, 0);
+    const token = store.create({ ...payload, user: 'user@example.com' }, 0);
     const entry = store.peek(token, 1)!;
     expect(Object.keys(entry)).toEqual(expect.arrayContaining(['appKey', 'provider', 'connectionFields', 'user', 'createdAt']));
     expect(JSON.stringify(entry)).not.toContain('secret');

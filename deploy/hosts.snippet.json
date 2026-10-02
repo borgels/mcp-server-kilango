@@ -3,14 +3,14 @@
   "kilango.aaa.mcp.example.com": {
     "tenant": "<tenant GUID>",
     "upstream": "http://mcp-kilango-aaa:3000/mcp",
-    "groupId": "<SG-MCP-kilango-aaa objectId>",
+    "groupId": "<security group objectId>",
     "system": "kilango",
     "company": "aaa"
   },
   "kilango.bbb.mcp.example.com": {
     "tenant": "<tenant GUID>",
     "upstream": "http://mcp-kilango-bbb:3000/mcp",
-    "groupId": "<SG-MCP-kilango-bbb objectId>",
+    "groupId": "<security group objectId>",
     "system": "kilango",
     "company": "bbb"
   }

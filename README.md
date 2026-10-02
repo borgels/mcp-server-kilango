@@ -11,9 +11,8 @@ server operates the *studio/operator* plane on the operator's behalf.
 ## Auth & tenancy model
 
 One host maps to one company's Kilango **workspace**
-(`kilango.bos.mcp.example.com`, `kilango.spz…`, `kilango.one…`), exactly like the
-`e-conomic` servers in the fleet. Access is gated by the Entra group `SG-MCP-kilango-<company>`
-at the borgels MCP gateway; the gateway forwards the verified user as `X-MCP-User` (recorded
+(e.g. `kilango.<company>.mcp.example.com`). Access is gated by an Entra security group
+at an authenticating MCP gateway in front; the gateway forwards the verified user as `X-MCP-User` (recorded
 in the audit log). The server authenticates to Kilango with a single **shared,
 workspace-bound API key** (`KILANGO_API_KEY`, a `hub_live_…` key that self-scopes to that
 one workspace). Mint an **ADMIN write** key so full portal building (incl. deletes/publish)
@@ -80,5 +79,5 @@ KILANGO_API_BASE_URL=https://<dev-gateway> KILANGO_API_KEY=hub_test_... npm run 
 ## Deploy
 
 See `deploy/` for the docker-compose service block, `hosts.json` entries, Caddy site blocks,
-and example env files to copy into `~/mcp` on the server (mirrored in `bos-server-config`).
+and example env files.
 The image publishes to `ghcr.io/borgels/mcp-server-kilango:latest` on push to `main`.

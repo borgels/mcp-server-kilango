@@ -15,7 +15,7 @@ public issue for anything exploitable.
   operator in a one-time browser form at `/kilango/connect-app` and passed straight to
   Kilango's `save_connection`, which stores them in Kilango's own AES-256-GCM vault. This
   server never persists them and never logs them.
-- **Loopback `/mcp`** is protected by `MCP_HTTP_TOKEN`. Behind the borgels MCP gateway the
+- **Loopback `/mcp`** is protected by `MCP_HTTP_TOKEN`. Behind an authenticating gateway the
   token is supplied via `internal.env`; the enrollment paths (`/kilango/*`) and `/healthz`
   are intentionally open because the browser reaching them has no gateway token — their
   security is the single-use, short-TTL `state`.

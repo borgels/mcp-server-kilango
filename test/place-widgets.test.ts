@@ -84,7 +84,7 @@ describe('assertPlaceForm', () => {
 
 describe('normalizeBody', () => {
   it('passes objects and arrays through untouched', () => {
-    const obj = { name: 'Spitze ApS' };
+    const obj = { name: 'Beta Handel ApS' };
     expect(normalizeBody(obj)).toBe(obj);
     const arr = [1, 2];
     expect(normalizeBody(arr)).toBe(arr);
@@ -93,7 +93,7 @@ describe('normalizeBody', () => {
   it('decodes a JSON-encoded string body', () => {
     // This is what an MCP client sends when the schema is untyped — and what
     // made every body-carrying operation fail with "received string".
-    expect(normalizeBody('{"name":"Spitze ApS"}')).toEqual({ name: 'Spitze ApS' });
+    expect(normalizeBody('{"name":"Beta Handel ApS"}')).toEqual({ name: 'Beta Handel ApS' });
   });
 
   it('treats an empty string as no body', () => {
@@ -102,7 +102,7 @@ describe('normalizeBody', () => {
   });
 
   it('throws a readable error on a string that is not JSON', () => {
-    expect(() => normalizeBody('name=Spitze')).toThrow(/not valid JSON/i);
+    expect(() => normalizeBody('name=Beta')).toThrow(/not valid JSON/i);
   });
 
   it('leaves undefined alone', () => {

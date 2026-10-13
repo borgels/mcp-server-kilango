@@ -42,8 +42,15 @@ describe('buildIndex', () => {
     expect(reorder.requiresIfMatch).toBe(true);
     expect(reorder.pathParams).toEqual(['portalRef', 'pageRef']);
 
-    // x-hub-write:false forces a POST to read-only.
-    expect(index.get('check_connection_health')!.isWrite).toBe(false);
+    // Every non-GET method is a write; x-hub-write:false cannot downgrade it.
+    expect(index.get('check_connection_health')!.isWrite).toBe(true);
+  });
+
+  it('lets x-hub-write:true upgrade a GET to a write', () => {
+    const index = buildIndex({
+      paths: { '/export': { get: { operationId: 'export_all', 'x-hub-write': true } } },
+    });
+    expect(index.get('export_all')!.isWrite).toBe(true);
   });
 });
 
@@ -62,6 +69,13 @@ describe('resolveOperation', () => {
   it('throws on a missing path param', () => {
     const index = buildIndex(spec);
     expect(() => resolveOperation(index, 'reorder_page_blocks', { path: { portalRef: 'acme' } })).toThrow(/pageRef/);
+  });
+
+  it.each(['..', '.', 'a/b', '%2e%2e', '..%2f'])('rejects unsafe path param %j', value => {
+    const index = buildIndex(spec);
+    expect(() =>
+      resolveOperation(index, 'reorder_page_blocks', { path: { portalRef: value, pageRef: 'home' } }),
+    ).toThrow(/Invalid path parameter "portalRef"/);
   });
 
   it('throws on an unknown operationId', () => {

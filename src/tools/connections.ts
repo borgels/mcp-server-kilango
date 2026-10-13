@@ -1,8 +1,10 @@
 import { z } from 'zod/v4';
+import { encodePathParam } from '../path-params.js';
 import { DESTRUCTIVE, READ_ONLY, runTool, type RegisterFn } from './shared.js';
 import { assertWritesEnabled } from '../kilango/policy.js';
 
-const ref = (v: string) => encodeURIComponent(v);
+/** Validate (no dot segments / separators) and encode a caller-supplied path segment. */
+const ref = (v: string) => encodePathParam(v);
 
 export const registerConnectionTools: RegisterFn = (server, ctx) => {
   server.registerTool(
@@ -35,6 +37,11 @@ export const registerConnectionTools: RegisterFn = (server, ctx) => {
       }),
   );
 
+  // Deliberately NOT gated by KILANGO_ENABLE_WRITES: the health-check only
+  // re-verifies stored credentials against the source system and changes no
+  // configuration, so read-only instances can still diagnose connections. The
+  // provider is validated by ref(), so the request cannot be redirected to a
+  // different endpoint; via kilango_call_operation the same POST is gated.
   server.registerTool(
     'kilango_check_connection_health',
     {

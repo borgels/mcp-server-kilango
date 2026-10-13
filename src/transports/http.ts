@@ -14,6 +14,7 @@ import {
 import {
   assertAllowedOrigin,
   assertAuthorized,
+  assertForwardedUserRequiresToken,
   corsHeaders,
   firstHeader,
   getHttpConfig,
@@ -33,10 +34,16 @@ const client = new KilangoClient();
 const states = new StateStore();
 const publicBaseUrl = process.env.KILANGO_PUBLIC_BASE_URL;
 
-if (!config.httpToken && (process.env.KILANGO_TRUST_FORWARDED_USER ?? '') !== '') {
-  console.error(
-    'WARNING: MCP_HTTP_TOKEN is not set — the loopback /mcp path is unauthenticated. Set it in internal.env behind the gateway.',
-  );
+try {
+  // X-MCP-User is only meaningful when the gateway is the sole client; without
+  // MCP_HTTP_TOKEN anyone reaching /mcp could claim any identity.
+  assertForwardedUserRequiresToken(['KILANGO_TRUST_FORWARDED_USER'], config);
+} catch (error) {
+  console.error(`FATAL: ${(error as Error).message}`);
+  process.exit(1);
+}
+if (!config.httpToken) {
+  console.error('WARNING: MCP_HTTP_TOKEN is not set — the /mcp path is unauthenticated. Set it in internal.env behind the gateway.');
 }
 
 const httpServer = createNodeServer(async (req, res) => {

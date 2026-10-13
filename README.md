@@ -59,6 +59,18 @@ See `.env.example`. Key vars: `KILANGO_API_BASE_URL`, `KILANGO_PUBLIC_BASE_URL`,
 `KILANGO_API_KEY`, `KILANGO_ENABLE_WRITES` (coarse kill-switch), `KILANGO_AUDIT_LOG`,
 `MCP_HTTP_TOKEN` (protects the loopback `/mcp`).
 
+Security notes:
+
+- `MCP_HTTP_TOKEN` is compared in constant time. With `KILANGO_TRUST_FORWARDED_USER=true`
+  the HTTP server refuses to start unless `MCP_HTTP_TOKEN` is set.
+- Every non-GET operation in the OpenAPI contract counts as a write for
+  `KILANGO_ENABLE_WRITES`; `x-hub-write: true` can additionally mark a GET as a write,
+  but `x-hub-write: false` no longer downgrades a mutating method.
+- Caller-supplied path values (portal/page/app/provider refs, operation path params) are
+  rejected if they are empty, `.`/`..`, or contain `/`, `\`, `?`, `#` or encoded dots/slashes.
+- `kilango_check_connection_health` stays available when writes are disabled (it only
+  re-verifies stored credentials); the same POST via `kilango_call_operation` is gated.
+
 ## Develop
 
 ```

@@ -1,5 +1,6 @@
 import type { KilangoClient } from './client.js';
 import { KilangoApiError } from '../errors.js';
+import { encodePathParam } from '../path-params.js';
 
 export interface ConnectionField {
   key: string;
@@ -30,12 +31,12 @@ export type BeginConnectResult =
 // --- Raw operator API calls used by both the tools and the enrollment form ---
 
 export async function fetchCatalogApp(client: KilangoClient, appKey: string): Promise<CatalogApp> {
-  const res = await client.request<CatalogApp>(`/catalog/apps/${encodeURIComponent(appKey)}`);
+  const res = await client.request<CatalogApp>(`/catalog/apps/${encodePathParam(appKey, 'appKey')}`);
   return res.data;
 }
 
 export async function installApp(client: KilangoClient, appKey: string, dryRun = false): Promise<unknown> {
-  const res = await client.request(`/app-installations/${encodeURIComponent(appKey)}`, {
+  const res = await client.request(`/app-installations/${encodePathParam(appKey, 'appKey')}`, {
     method: 'PUT',
     body: {},
     dryRun,
@@ -49,7 +50,7 @@ export async function saveConnection(
   secret: Record<string, string>,
   extra?: { name?: string; baseUrl?: string },
 ): Promise<unknown> {
-  const res = await client.request(`/connections/${encodeURIComponent(provider)}`, {
+  const res = await client.request(`/connections/${encodePathParam(provider, 'provider')}`, {
     method: 'PUT',
     body: { secret, ...(extra?.name ? { name: extra.name } : {}), ...(extra?.baseUrl ? { baseUrl: extra.baseUrl } : {}) },
   });
@@ -63,14 +64,14 @@ export async function activateAppInPortal(
   config?: unknown,
 ): Promise<unknown> {
   const res = await client.request(
-    `/portals/${encodeURIComponent(portalRef)}/apps/${encodeURIComponent(appKey)}`,
+    `/portals/${encodePathParam(portalRef, 'portalRef')}/apps/${encodePathParam(appKey, 'appKey')}`,
     { method: 'PUT', body: config === undefined ? {} : { config } },
   );
   return res.data;
 }
 
 export async function checkConnectionHealth(client: KilangoClient, provider: string): Promise<unknown> {
-  const res = await client.request(`/connections/${encodeURIComponent(provider)}/health-check`, {
+  const res = await client.request(`/connections/${encodePathParam(provider, 'provider')}/health-check`, {
     method: 'POST',
     body: {},
   });

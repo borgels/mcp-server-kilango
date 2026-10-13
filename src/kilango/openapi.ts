@@ -1,4 +1,5 @@
 import type { QueryValue } from './client.js';
+import { encodePathParam } from '../path-params.js';
 
 /** Minimal shape of the bits of the OpenAPI 3.1 document we read. */
 export interface OpenApiParameter {
@@ -63,8 +64,11 @@ export function buildIndex(spec: OpenApiSpec): Map<string, OperationInfo> {
       }
       const params = op.parameters ?? [];
       const httpMethod = method.toUpperCase() as OperationInfo['method'];
-      const isWrite =
-        typeof op['x-hub-write'] === 'boolean' ? op['x-hub-write'] : MUTATING.has(httpMethod);
+      // Every non-GET method is a write. `x-hub-write: true` can additionally
+      // mark a GET as a write, but `x-hub-write: false` never downgrades a
+      // mutating method (the contract is fetched remotely and is not trusted
+      // to relax the write gate).
+      const isWrite = MUTATING.has(httpMethod) || op['x-hub-write'] === true;
       index.set(op.operationId, {
         operationId: op.operationId,
         method: httpMethod,
@@ -99,7 +103,7 @@ export function resolveOperation(
     if (value === undefined || value === null || value === '') {
       throw new Error(`Missing path parameter "${key}" for ${operationId} (${info.pathTemplate}).`);
     }
-    return encodeURIComponent(String(value));
+    return encodePathParam(String(value), `path parameter "${key}"`);
   });
   return {
     operationId,

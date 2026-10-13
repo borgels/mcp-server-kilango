@@ -1,8 +1,10 @@
 import { z } from 'zod/v4';
+import { encodePathParam } from '../path-params.js';
 import { DESTRUCTIVE, READ_ONLY, runTool, WRITE, type RegisterFn } from './shared.js';
 import { assertWritesEnabled } from '../kilango/policy.js';
 
-const ref = (v: string) => encodeURIComponent(v);
+/** Validate (no dot segments / separators) and encode a caller-supplied path segment. */
+const ref = (v: string) => encodePathParam(v);
 
 export const registerPortalTools: RegisterFn = (server, ctx) => {
   server.registerTool(
